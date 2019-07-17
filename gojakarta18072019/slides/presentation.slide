@@ -1,0 +1,113 @@
+Using go/analysis package
+GoJakarta
+
+18 July 2019
+
+Heikki Parviainen
+heikki.parviainen@brank.as
+
+* What is a Go analyzer?
+
+- Analyzers read and examine your Go code and provide diagnostics.
+
+- These diagnostics can be warning, errors, or just suggestions.
+
+.image images/gopher.png 500 500
+
+* Why we should care about this package?
+
+- Prevent yourself from making mistakes
+- Helpful for spotting errors humans can miss
+- Save times to debugging common/recurring issues
+
+* What is the go/analysis package?
+
+.link https://godoc.org/golang.org/x/tools/go/analysis
+
+- go/analysis provide a a common framework that provides an easy and performant way to analyze Go code.
+- under the hood used by many Go linters e.g.: staticcheck, vet, etc.
+
+The primary type in this package is Analyzer. An Analyzer statically describes an analysis function: its name, documentation, flags, relationship to other analyzers, and of course, its logic.
+
+* Writing our own analyzer tool
+
+- requirement:
+Our analyzer will check for any integer addition in Go program.
+
+- package structure:
+
+	├── cmd
+	│   └── gocheck
+	│       └── main.go # our analyzer command
+	├── foo
+	│   └── main.go # our test program
+	└── gocheck
+	    └── gocheck.go # our analyzer tool
+
+* The Analyzer
+Analyzer describes an analysis name, documentation, flags, relationship to other
+analyzers and its logic.
+
+	// An Analyzer describes an analysis function and its options.
+	type Analyzer struct {
+		// The Name of the analyzer must be a valid Go identifier
+		// as it may appear in command-line flags, URLs, and so on.
+		Name string
+
+		// Doc is the documentation for the analyzer.
+		// The part before the first "\n\n" is the title
+		// (no capital or period, max ~60 letters).
+		Doc string
+
+		// Run applies the analyzer to a package.
+		// It returns an error if the analyzer failed.
+		Run func(*Pass) (interface{}, error)
+
+		// ... omitted fields
+	}
+
+* The Analyzer (Cont.)
+
+	var Analyzer = &analysis.Analyzer{
+		Name: "gocheck",
+		Doc:  "report interger additions"
+		Run:  run,
+	}
+* The Analyzer (Run)
+
+	func run(pass *analysis.Pass) (interface{}, error) {                                                                                                                                                                                                                                       
+		for _, file := range pass.Files {                                                                                                                                                                                                                                                  
+			ast.Inspect(file, func(n ast.Node) bool {                                                                                                                                                                                                                                  
+			// check whether the call expression matches time.Now().Sub()                                                                                                                                                                                                      
+			be, ok := n.(*ast.BinaryExpr)                                                                                                                                                                                                                                      
+			if !ok {                                                                                                                                                                                                                                                         
+				return true                                                                                                                                                                                                                             
+			}                                                                                                                                                                                                                                                                                                                                                                                                                                
+			if be.Op != token.ADD {                                                                                                                                                                                                                                            
+				return true                                                                                                                                                                                                                                      
+			}
+			....
+			pass.Reportf(be.Pos(), "integer addition found %q",
+				render(pass.Fset, be))
+	....
+
+* The Analyzer (cmd)
+
+	package main
+
+	import (
+		"github.com/rnd/talks/03-analysis/src/gocheck"
+		"golang.org/x/tools/go/analysis/singlechecker"
+	)
+
+	func main() {
+		singlechecker.Main(gocheck.Analyzer)
+	}
+	
+* Materials
+
+The materials for this presentation are available on GitHub:
+
+.link https://github.com/Hekewa/talks/01-Analyzer
+
+
