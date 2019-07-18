@@ -4,7 +4,7 @@ GoJakarta
 18 July 2019
 
 Heikki Parviainen
-heikki.parviainen@brank.as
+heikki@brank.as
 
 * What is a Go analyzer?
 
@@ -14,35 +14,23 @@ heikki.parviainen@brank.as
 
 .image images/gopher.png 500 500
 
-* Why we should care about this package?
-
-- Prevent yourself from making mistakes
-- Helpful for spotting errors humans can miss
-- Save times to debugging common/recurring issues
-
 * What is the go/analysis package?
 
 .link https://godoc.org/golang.org/x/tools/go/analysis
 
-- go/analysis provide a a common framework that provides an easy and performant way to analyze Go code.
-- under the hood used by many Go linters e.g.: staticcheck, vet, etc.
+- The analysis package defines the interface between a modular static analysis and an analysis driver program.
+- A common framework that provides an easy and performant way to analyze Go code.
+- Used under the hood by many Go tools e.g.: vet and staticcheck
 
 The primary type in this package is Analyzer. An Analyzer statically describes an analysis function: its name, documentation, flags, relationship to other analyzers, and of course, its logic.
 
-* Writing our own analyzer tool
+* Why we should care about this package?
 
-- requirement:
-Our analyzer will check for any integer addition in Go program.
-
-- package structure:
-
-	├── cmd
-	│   └── gocheck
-	│       └── main.go # our analyzer command
-	├── foo
-	│   └── main.go # our test program
-	└── gocheck
-	    └── gocheck.go # our analyzer tool
+- Create new analyzers and integrate them into existing tools
+- Building complex general-purpose tools
+- Helpful for analysing your own codebase
+- Save times to debugging common/recurring issues or large code bases
+- Automating something very specific to your project
 
 * The Analyzer
 Analyzer describes an analysis name, documentation, flags, relationship to other
@@ -75,16 +63,16 @@ analyzers and its logic.
 	}
 * The Analyzer (Run)
 
-	func run(pass *analysis.Pass) (interface{}, error) {                                                                                                                                                                                                                                       
-		for _, file := range pass.Files {                                                                                                                                                                                                                                                  
-			ast.Inspect(file, func(n ast.Node) bool {                                                                                                                                                                                                                                  
-			// check whether the call expression matches time.Now().Sub()                                                                                                                                                                                                      
-			be, ok := n.(*ast.BinaryExpr)                                                                                                                                                                                                                                      
-			if !ok {                                                                                                                                                                                                                                                         
-				return true                                                                                                                                                                                                                             
-			}                                                                                                                                                                                                                                                                                                                                                                                                                                
-			if be.Op != token.ADD {                                                                                                                                                                                                                                            
-				return true                                                                                                                                                                                                                                      
+	func run(pass *analysis.Pass) (interface{}, error) {
+		for _, file := range pass.Files {
+			ast.Inspect(file, func(n ast.Node) bool {
+			// check whether the call expression matches time.Now().Sub()
+			be, ok := n.(*ast.BinaryExpr)
+			if !ok {
+				return true
+			}
+			if be.Op != token.ADD {
+				return true
 			}
 			....
 			pass.Reportf(be.Pos(), "integer addition found %q",
@@ -96,18 +84,43 @@ analyzers and its logic.
 	package main
 
 	import (
-		"github.com/rnd/talks/03-analysis/src/gocheck"
+		"github.com/hekewa/talks/gojakarta18072019/example/checkaddition"
 		"golang.org/x/tools/go/analysis/singlechecker"
 	)
 
 	func main() {
 		singlechecker.Main(gocheck.Analyzer)
 	}
-	
+
+* Writing our own analyzer tool
+
+- requirement:
+Our analyzer will check for any integer literal addition in Go program.
+
+- package structure:
+
+	├── cmd
+	│   └── gocheck
+	│       └── main.go # our analyzer command
+	├── foo
+	│   └── main.go # our test program
+	└── gocheck
+	    └── gocheck.go # our analyzer tool
+
 * Materials
 
 The materials for this presentation are available on GitHub:
 
 .link https://github.com/Hekewa/talks/01-Analyzer
 
+Additional resources:
 
+.link https://github.com/golang/tools/tree/master/go/analysis/passes
+(Analyzers used by the go vet tool)
+
+.link https://golang.org/pkg/go/ast/
+.link https://golang.org/ref/spec
+(References for traversing Abstract Syntax Trees)
+
+.link https://gist.github.com/zupzup/2c7d2baef1120933ef7b2f1360e2e5a0
+(Gist example of basic AST traversal without analyzer)
